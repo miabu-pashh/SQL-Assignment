@@ -1,0 +1,118 @@
+ASSIGMENT 1:
+	1)SELECT * FROM  Sales.SalesPerson AS SALES
+	2)select FirstName,LastName
+	from Person.Person
+	where FirstName like 'b%'
+	ORDER BY FirstName
+	3)
+	SELECT     Person.Person.FirstName, Person.Person.LastName, HumanResources.Employee.JobTitle
+	FROM         Person.Person 
+	INNER JOIN
+ 	HumanResources.Employee ON Person.Person.BusinessEntityID = HumanResources.Employee.BusinessEntityID
+
+	4) 
+	SELECT Name,Color,Weight
+ 	FROM Production.Product 
+ 	where Weight is not null and Color is not null;
+	5)
+	SELECT Description,ISNULL(MaxQty,0.00)
+ 	FROM Sales.SpecialOffer 
+	6)
+	SELECT CurrencyRateDate,FromCurrencyCode,ToCurrencyCode,AverageRate
+	FROM Sales.CurrencyRate
+	WHERE ToCurrencyCode='GBP' AND  datepart(year,CurrencyRateDate)=2005
+	7)
+	SELECT FirstName ,LastName 
+	FROM Person.Person
+	WHERE FirstName LIKE '%ss%'
+	ALTER TABLE Person.Person ADD p INT IDENTITY(1,1) 
+	8)
+	select BusinessEntityID as SalesPersonID,CommissionPct, 
+	'Commission Band'= Case 
+	when CommissionPct = 0 then 'band 0'
+	when CommissionPct > 0 and CommissionPct <= 0.01 then 'band 1'
+	when CommissionPct > 0.01 and CommissionPct <= 0.015 then 'band 2'
+	when CommissionPct > 0.015 then 'band 3'
+	end
+	from Sales.SalesPerson
+	order by CommissionPct
+	9)
+	SELECT TOP(124)EMP1.FirstName,EMP1.LastName,EMP2.OrganizationLevel
+	FROM  HumanResources.Employee AS EMP2
+	JOIN person.person AS EMP1 ON (EMP1.BusinessEntityID=EMP2.BusinessEntityID)
+	ORDER BY OrganizationLevel 
+
+	10)
+	SELECT ProductID,Quantity
+	FROM Production.ProductInventory
+	order by Quantity desc;
+
+2)
+Using JOIN:
+SELECT *
+FROM Sales.Customer c
+LEFT OUTER JOIN Sales.SalesOrderHeader s ON c.CustomerID = s.CustomerID
+WHERE s.SalesOrderID IS NULL
+
+Using CTE:
+WITH s AS 
+(   SELECT CustomerID,SalesOrderID
+    FROM Sales.SalesOrderHeader
+) 
+SELECT *
+FROM Sales.Customer c
+LEFT OUTER JOIN s ON c.CustomerID = s.CustomerID
+WHERE s.SalesOrderID IS NULL
+
+Using SubQuery:
+SELECT *
+FROM Sales.Customer c
+where c.CustomerID in(
+SELECT s.CustomerID
+FROM Sales.SalesOrderHeader s
+WHERE s.SalesOrderID IS NULL)
+
+Using EXISTS:
+SELECT *
+FROM Sales.Customer c
+where EXISTS(
+SELECT *
+FROM Sales.SalesOrderHeader s
+WHERE s.SalesOrderID IS NULL
+AND c.customerID = s.customerID)
+
+
+3)
+
+SELECT TOP(5) OrderDate,AccountNumber,TotalDue FROM  Sales.SalesOrderHeader 
+WHERE TotalDue>7000
+ORDER BY OrderDate DESC
+
+4)
+create function salesdetails(@salesOrdrId int,@currencyCode varchar(10),@orderdate date)
+returns table
+as
+return(select orderqty,productId,unitprice*EndOfDayRate as FinalRate from Sales.SalesOrderDetail,Sales.CurrencyRate where 
+salesOrderId=@salesOrdrId and TocurrencyCode=@currencyCode and CurrencyRateDate=@orderdate);
+ 
+select * from dbo.salesdetails(43659,'ars','2005-07-01 00:00:00.000')
+
+5)
+CREATE PROCEDURE maibu @name char(50) ='pasha' AS
+SELECT FirstName FROM Person.Person
+WHERE FirstName=ISNULL(FirstName,@name)
+GO
+EXEC maibu
+
+6)
+CREATE TRIGGER [Production].[trglimitpricechanges]
+ON [Production].[Product]
+FOR UPDATE AS IF EXISTS(SELECT * FROM inserted i join deleted d on i.ProductID=d.ProductID
+WHERE i.ListPrice>(d.ListPrice*1.15)) begin RAISERROR('price increase may not be greater than 15%',16,1) rollback tran end 
+go 
+
+ALTER TRIGGER [Production].[trgLimitPriceChanges] ON [Production].[Product] FOR UPDATE AS IF UPDATE(ListPrice) BEGIN IF EXISTS ( SELECT * FROM inserted i JOIN deleted d ON i.ProductID = d.ProductID WHERE i.ListPrice > (d.ListPrice * 1.15)  ) BEGIN RAISERROR(‘Price increase may not be greater than 15 percent. Transaction Failed.’,16,1) ROLLBACK TRAN END GO
+
+
+
+
